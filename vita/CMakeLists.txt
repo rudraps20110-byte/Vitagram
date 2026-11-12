@@ -30,11 +30,6 @@ add_executable(${PROJECT_NAME}
     src/ui.cpp
 )
 
-find_library(VITA_SHAREDFB_STUB NAMES SceSharedfb_stub SceSharedFb_stub)
-if(NOT VITA_SHAREDFB_STUB)
-    set(VITA_SHAREDFB_STUB SceSharedfb_stub)
-endif()
-
 target_link_libraries(${PROJECT_NAME}
     vita2d
     freetype
@@ -43,7 +38,6 @@ target_link_libraries(${PROJECT_NAME}
     z
     m
     SceAppMgr_stub
-    ${VITA_SHAREDFB_STUB}
     ScePgf_stub
     ScePvf_stub
     SceGxm_stub
