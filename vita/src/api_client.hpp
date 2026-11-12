@@ -28,6 +28,19 @@ public:
                        UserProfile& out_profile,
                        std::string& out_error);
 
+    bool fetch_inbox(const std::string& base_url,
+                     std::vector<MessageThreadSummary>& out_threads,
+                     std::string& out_error);
+    bool fetch_thread(const std::string& base_url,
+                      const std::string& thread_id,
+                      MessageThread& out_thread,
+                      std::string& out_error);
+    bool send_message(const std::string& base_url,
+                      const std::string& thread_id,
+                      const std::string& text,
+                      DirectMessage& out_message,
+                      std::string& out_error);
+
     vita2d_texture* fetch_jpeg_texture(const std::string& base_url, const std::string& path_or_url);
 
 private:

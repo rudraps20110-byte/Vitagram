@@ -89,6 +89,68 @@ void AppUI::load_feed(bool reset) {
     }
 }
 
+void AppUI::load_inbox() {
+    show_loading_overlay("Loading messages...");
+    std::string err;
+    if (api_.fetch_inbox(proxy_url_, inbox_threads_, err)) {
+        inbox_loaded_once_ = true;
+        if (inbox_index_ >= static_cast<int>(inbox_threads_.size())) {
+            inbox_index_ = 0;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::open_thread(const std::string& thread_id) {
+    if (thread_id.empty()) return;
+    show_loading_overlay("Opening chat...");
+    std::string err;
+    MessageThread thread;
+    if (api_.fetch_thread(proxy_url_, thread_id, thread, err)) {
+        active_thread_ = std::move(thread);
+        in_thread_view_ = true;
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::send_reply(const std::string& text) {
+    if (text.empty() || active_thread_.id.empty()) return;
+    show_loading_overlay("Sending message...");
+    std::string err;
+    DirectMessage sent;
+    if (api_.send_message(proxy_url_, active_thread_.id, text, sent, err)) {
+        active_thread_.messages.push_back(sent);
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        if (inbox_index_ >= 0 && inbox_index_ < static_cast<int>(inbox_threads_.size()) &&
+            inbox_threads_[inbox_index_].id == active_thread_.id) {
+            inbox_threads_[inbox_index_].last_message = sent.text;
+            inbox_threads_[inbox_index_].timestamp_text = sent.timestamp_text;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::switch_to_tab(AppTab tab) {
+    active_tab_ = tab;
+    if (active_tab_ == AppTab::Search && !search_loaded_once_) {
+        run_search("");
+    } else if (active_tab_ == AppTab::Messages && !inbox_loaded_once_) {
+        load_inbox();
+    } else if (active_tab_ == AppTab::Profile && !profile_loaded_) {
+        std::string target = !feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer";
+        open_profile(target);
+    }
+}
+
 void AppUI::run_search(const std::string& query) {
     search_query_ = query;
     show_loading_overlay("Searching users...");
@@ -99,6 +161,68 @@ void AppUI::run_search(const std::string& query) {
         error_message_.clear();
     } else {
         error_message_ = err;
+    }
+}
+
+void AppUI::load_inbox() {
+    show_loading_overlay("Loading messages...");
+    std::string err;
+    if (api_.fetch_inbox(proxy_url_, inbox_threads_, err)) {
+        inbox_loaded_once_ = true;
+        if (inbox_index_ >= static_cast<int>(inbox_threads_.size())) {
+            inbox_index_ = 0;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::open_thread(const std::string& thread_id) {
+    if (thread_id.empty()) return;
+    show_loading_overlay("Opening chat...");
+    std::string err;
+    MessageThread thread;
+    if (api_.fetch_thread(proxy_url_, thread_id, thread, err)) {
+        active_thread_ = std::move(thread);
+        in_thread_view_ = true;
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::send_reply(const std::string& text) {
+    if (text.empty() || active_thread_.id.empty()) return;
+    show_loading_overlay("Sending message...");
+    std::string err;
+    DirectMessage sent;
+    if (api_.send_message(proxy_url_, active_thread_.id, text, sent, err)) {
+        active_thread_.messages.push_back(sent);
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        if (inbox_index_ >= 0 && inbox_index_ < static_cast<int>(inbox_threads_.size()) &&
+            inbox_threads_[inbox_index_].id == active_thread_.id) {
+            inbox_threads_[inbox_index_].last_message = sent.text;
+            inbox_threads_[inbox_index_].timestamp_text = sent.timestamp_text;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::switch_to_tab(AppTab tab) {
+    active_tab_ = tab;
+    if (active_tab_ == AppTab::Search && !search_loaded_once_) {
+        run_search("");
+    } else if (active_tab_ == AppTab::Messages && !inbox_loaded_once_) {
+        load_inbox();
+    } else if (active_tab_ == AppTab::Profile && !profile_loaded_) {
+        std::string target = !feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer";
+        open_profile(target);
     }
 }
 
@@ -116,6 +240,68 @@ void AppUI::open_profile(const std::string& username) {
         error_message_.clear();
     } else {
         error_message_ = err;
+    }
+}
+
+void AppUI::load_inbox() {
+    show_loading_overlay("Loading messages...");
+    std::string err;
+    if (api_.fetch_inbox(proxy_url_, inbox_threads_, err)) {
+        inbox_loaded_once_ = true;
+        if (inbox_index_ >= static_cast<int>(inbox_threads_.size())) {
+            inbox_index_ = 0;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::open_thread(const std::string& thread_id) {
+    if (thread_id.empty()) return;
+    show_loading_overlay("Opening chat...");
+    std::string err;
+    MessageThread thread;
+    if (api_.fetch_thread(proxy_url_, thread_id, thread, err)) {
+        active_thread_ = std::move(thread);
+        in_thread_view_ = true;
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::send_reply(const std::string& text) {
+    if (text.empty() || active_thread_.id.empty()) return;
+    show_loading_overlay("Sending message...");
+    std::string err;
+    DirectMessage sent;
+    if (api_.send_message(proxy_url_, active_thread_.id, text, sent, err)) {
+        active_thread_.messages.push_back(sent);
+        int total = static_cast<int>(active_thread_.messages.size());
+        thread_scroll_offset_ = std::max(0, total - 5);
+        if (inbox_index_ >= 0 && inbox_index_ < static_cast<int>(inbox_threads_.size()) &&
+            inbox_threads_[inbox_index_].id == active_thread_.id) {
+            inbox_threads_[inbox_index_].last_message = sent.text;
+            inbox_threads_[inbox_index_].timestamp_text = sent.timestamp_text;
+        }
+        error_message_.clear();
+    } else {
+        error_message_ = err;
+    }
+}
+
+void AppUI::switch_to_tab(AppTab tab) {
+    active_tab_ = tab;
+    if (active_tab_ == AppTab::Search && !search_loaded_once_) {
+        run_search("");
+    } else if (active_tab_ == AppTab::Messages && !inbox_loaded_once_) {
+        load_inbox();
+    } else if (active_tab_ == AppTab::Profile && !profile_loaded_) {
+        std::string target = !feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer";
+        open_profile(target);
     }
 }
 
@@ -156,6 +342,22 @@ void AppUI::preload_pending_textures() {
                 return;
             }
         }
+    } else if (active_tab_ == AppTab::Messages) {
+        if (in_thread_view_) {
+            if (!active_thread_.avatar_url.empty() &&
+                !textures_.get(active_thread_.avatar_url) &&
+                !textures_.has_failed(active_thread_.avatar_url)) {
+                get_or_load_texture(active_thread_.avatar_url);
+                return;
+            }
+        } else {
+            for (const auto& t : inbox_threads_) {
+                if (!t.avatar_url.empty() && !textures_.get(t.avatar_url) && !textures_.has_failed(t.avatar_url)) {
+                    get_or_load_texture(t.avatar_url);
+                    return;
+                }
+            }
+        }
     } else if (active_tab_ == AppTab::Profile && profile_loaded_) {
         if (!profile_.avatar_url.empty() && !textures_.get(profile_.avatar_url) && !textures_.has_failed(profile_.avatar_url)) {
             get_or_load_texture(profile_.avatar_url);
@@ -176,6 +378,8 @@ void AppUI::handle_osk_done(OskResult res) {
     if (res == OskResult::Confirmed) {
         if (osk_target_ == OskTarget::SearchQuery) {
             run_search(osk_.text());
+        } else if (osk_target_ == OskTarget::MessageReply) {
+            send_reply(osk_.text());
         } else if (osk_target_ == OskTarget::ProxyUrl) {
             std::string next = osk_.text();
             while (!next.empty() && next.back() == '/') next.pop_back();
@@ -216,15 +420,9 @@ bool AppUI::update(uint32_t pressed_buttons, const SceTouchData& touch, bool tou
         int tx = touch.report[0].x / 2;
         int ty = touch.report[0].y / 2;
         if (ty >= kScreenH - kFooterH) {
-            int tab = tx / (kScreenW / 4);
-            if (tab >= 0 && tab <= 3) {
-                active_tab_ = static_cast<AppTab>(tab);
-                if (active_tab_ == AppTab::Search && !search_loaded_once_) {
-                    run_search("");
-                } else if (active_tab_ == AppTab::Profile && !profile_loaded_) {
-                    std::string target = !feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer";
-                    open_profile(target);
-                }
+            int tab = tx / (kScreenW / 5);
+            if (tab >= 0 && tab <= 4) {
+                switch_to_tab(static_cast<AppTab>(tab));
             }
             return true;
         }
@@ -232,19 +430,11 @@ bool AppUI::update(uint32_t pressed_buttons, const SceTouchData& touch, bool tou
 
     // L / R shoulder buttons switch tabs
     if (pressed_buttons & SCE_CTRL_LTRIGGER) {
-        int t = (static_cast<int>(active_tab_) + 3) % 4;
-        active_tab_ = static_cast<AppTab>(t);
-        if (active_tab_ == AppTab::Search && !search_loaded_once_) run_search("");
-        if (active_tab_ == AppTab::Profile && !profile_loaded_) {
-            open_profile(!feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer");
-        }
+        int t = (static_cast<int>(active_tab_) + 4) % 5;
+        switch_to_tab(static_cast<AppTab>(t));
     } else if (pressed_buttons & SCE_CTRL_RTRIGGER) {
-        int t = (static_cast<int>(active_tab_) + 1) % 4;
-        active_tab_ = static_cast<AppTab>(t);
-        if (active_tab_ == AppTab::Search && !search_loaded_once_) run_search("");
-        if (active_tab_ == AppTab::Profile && !profile_loaded_) {
-            open_profile(!feed_posts_.empty() ? feed_posts_[feed_index_].username : "vita_explorer");
-        }
+        int t = (static_cast<int>(active_tab_) + 1) % 5;
+        switch_to_tab(static_cast<AppTab>(t));
     }
 
     switch (active_tab_) {
@@ -291,6 +481,40 @@ bool AppUI::update(uint32_t pressed_buttons, const SceTouchData& touch, bool tou
                     osk_.open("Search Instagram Users", search_query_, 48);
                 } else {
                     open_profile(search_results_[search_index_].username);
+                }
+            }
+            break;
+        }
+
+        case AppTab::Messages: {
+            if (!inbox_loaded_once_) {
+                load_inbox();
+            }
+            if (in_thread_view_) {
+                int max_scroll = std::max(0, static_cast<int>(active_thread_.messages.size()) - 5);
+                if (pressed_buttons & SCE_CTRL_CIRCLE) {
+                    in_thread_view_ = false;
+                } else if (pressed_buttons & SCE_CTRL_SQUARE) {
+                    open_thread(active_thread_.id);
+                } else if (pressed_buttons & SCE_CTRL_UP) {
+                    if (thread_scroll_offset_ > 0) --thread_scroll_offset_;
+                } else if (pressed_buttons & SCE_CTRL_DOWN) {
+                    if (thread_scroll_offset_ < max_scroll) ++thread_scroll_offset_;
+                } else if (pressed_buttons & (SCE_CTRL_CROSS | SCE_CTRL_TRIANGLE)) {
+                    osk_target_ = OskTarget::MessageReply;
+                    osk_.open("Reply to " + active_thread_.title, "", 160);
+                }
+            } else {
+                if (pressed_buttons & SCE_CTRL_SQUARE) {
+                    load_inbox();
+                } else if (pressed_buttons & SCE_CTRL_UP) {
+                    if (inbox_index_ > 0) --inbox_index_;
+                } else if (pressed_buttons & SCE_CTRL_DOWN) {
+                    if (inbox_index_ + 1 < static_cast<int>(inbox_threads_.size())) ++inbox_index_;
+                } else if (pressed_buttons & SCE_CTRL_CROSS) {
+                    if (!inbox_threads_.empty() && inbox_index_ < static_cast<int>(inbox_threads_.size())) {
+                        open_thread(inbox_threads_[inbox_index_].id);
+                    }
                 }
             }
             break;
@@ -429,28 +653,33 @@ void AppUI::draw_tab_bar() const {
     vita2d_draw_rectangle(0, y, kScreenW, kFooterH, RGBA8(18, 20, 27, 255));
     vita2d_draw_rectangle(0, y, kScreenW, 2, RGBA8(38, 42, 54, 255));
 
-    const char* labels[4] = {"Feed", "Search", "Profile", "Settings"};
-    const int tab_w = kScreenW / 4;
-    for (int i = 0; i < 4; ++i) {
+    const char* labels[5] = {"Feed", "Search", "Messages", "Profile", "Settings"};
+    const int tab_w = kScreenW / 5;
+    for (int i = 0; i < 5; ++i) {
         bool active = (static_cast<int>(active_tab_) == i);
         if (active) {
             vita2d_draw_rectangle(i * tab_w, y, tab_w, 3, RGBA8(225, 48, 108, 255));
         }
         unsigned int col = active ? RGBA8(255, 255, 255, 255) : RGBA8(135, 142, 158, 255);
-        int tw = vita2d_pgf_text_width(font_, 0.95f, labels[i]);
-        vita2d_pgf_draw_text(font_, i * tab_w + (tab_w - tw) / 2, y + 32, col, 0.95f, labels[i]);
+        int tw = vita2d_pgf_text_width(font_, 0.9f, labels[i]);
+        vita2d_pgf_draw_text(font_, i * tab_w + (tab_w - tw) / 2, y + 32, col, 0.9f, labels[i]);
     }
 }
 
 void AppUI::draw_feed() {
     if (!error_message_.empty() && feed_posts_.empty()) {
         vita2d_draw_rectangle(60, 110, 840, 280, RGBA8(24, 26, 35, 255));
-        vita2d_pgf_draw_text(font_, 90, 160, RGBA8(255, 107, 107, 255), 1.1f, "Could not reach VitaGram Companion Proxy");
+        const char* heading = health_.ok
+            ? "Instagram Feed Temporarily Unavailable"
+            : "Could not reach VitaGram Companion Proxy";
+        vita2d_pgf_draw_text(font_, 90, 160, RGBA8(255, 107, 107, 255), 1.1f, heading);
         draw_wrapped_text(90, 205, 780, 26, 3, RGBA8(215, 220, 230, 255), 0.9f, error_message_);
         vita2d_pgf_draw_text(font_, 90, 300, RGBA8(160, 168, 185, 255), 0.88f,
-                             "1. Start the Node.js proxy on your PC:  npm start  (in server/)");
+                             health_.ok
+                                 ? "Tip: Try Search or Messages tabs, or wait 2-5 min if rate-limited."
+                                 : "1. Start the Node.js proxy on your PC:  node src/index.js  (in server/)");
         vita2d_pgf_draw_text(font_, 90, 330, RGBA8(160, 168, 185, 255), 0.88f,
-                             "2. Press [] (Square) to retry, or R -> Settings to edit Proxy URL.");
+                             "Press [] (Square) to retry, or tap Settings to edit Proxy URL.");
         return;
     }
 
@@ -695,6 +924,95 @@ void AppUI::draw_settings() const {
     }
 }
 
+void AppUI::draw_messages() {
+    if (!in_thread_view_) {
+        vita2d_pgf_draw_text(font_, 28, 76, RGBA8(255, 255, 255, 255), 1.05f, "Direct Messages");
+        vita2d_pgf_draw_text(font_, 700, 76, RGBA8(140, 148, 165, 255), 0.8f, "[]: Refresh   X: Open Chat");
+
+        if (!error_message_.empty() && inbox_threads_.empty()) {
+            draw_wrapped_text(28, 125, 900, 26, 3, RGBA8(255, 118, 117, 255), 0.9f, error_message_);
+            return;
+        }
+        if (inbox_threads_.empty()) {
+            vita2d_pgf_draw_text(font_, 340, 260, RGBA8(160, 168, 185, 255), 0.95f,
+                                 "No conversations found. Press [] to refresh.");
+            return;
+        }
+
+        const int max_rows = 5;
+        int start = std::max(0, inbox_index_ - max_rows + 1);
+        for (int i = 0; i < max_rows && (start + i) < static_cast<int>(inbox_threads_.size()); ++i) {
+            int idx = start + i;
+            const auto& t = inbox_threads_[idx];
+            int ry = 96 + i * 74;
+            bool sel = (idx == inbox_index_);
+            vita2d_draw_rectangle(24, ry, 912, 66, sel ? RGBA8(40, 44, 60, 255) : RGBA8(22, 24, 33, 255));
+            if (sel) vita2d_draw_rectangle(24, ry, 4, 66, RGBA8(225, 48, 108, 255));
+
+            vita2d_texture* av = textures_.get(t.avatar_url);
+            if (av) {
+                draw_fitted_texture(av, 36.0f, static_cast<float>(ry + 9), 48.0f, 48.0f);
+            } else {
+                vita2d_draw_rectangle(36, ry + 9, 48, 48, RGBA8(52, 58, 74, 255));
+            }
+
+            vita2d_pgf_draw_text(font_, 98, ry + 29, RGBA8(255, 255, 255, 255), 0.95f,
+                                 truncate_to_width(font_, 0.95f, t.title, 540).c_str());
+            vita2d_pgf_draw_text(font_, 98, ry + 52, RGBA8(160, 168, 185, 255), 0.8f,
+                                 truncate_to_width(font_, 0.8f, t.last_message, 680).c_str());
+
+            if (t.unread) {
+                vita2d_draw_rectangle(912, ry + 27, 10, 10, RGBA8(0, 149, 246, 255));
+            }
+            if (!t.timestamp_text.empty()) {
+                int tw = vita2d_pgf_text_width(font_, 0.78f, t.timestamp_text.c_str());
+                vita2d_pgf_draw_text(font_, 896 - tw, ry + 29, RGBA8(135, 142, 158, 255), 0.78f, t.timestamp_text.c_str());
+            }
+        }
+        return;
+    }
+
+    // Active Chat Thread View
+    vita2d_draw_rectangle(24, 58, 912, 52, RGBA8(24, 26, 36, 255));
+    vita2d_texture* av = textures_.get(active_thread_.avatar_url);
+    if (av) {
+        draw_fitted_texture(av, 34.0f, 65.0f, 38.0f, 38.0f);
+    }
+    vita2d_pgf_draw_text(font_, 84, 91, RGBA8(255, 255, 255, 255), 1.0f,
+                         truncate_to_width(font_, 1.0f, active_thread_.title, 480).c_str());
+    vita2d_pgf_draw_text(font_, 640, 90, RGBA8(140, 148, 165, 255), 0.8f, "O: Inbox   []: Refresh");
+
+    const int max_vis = 5;
+    int total = static_cast<int>(active_thread_.messages.size());
+    if (total == 0) {
+        vita2d_pgf_draw_text(font_, 360, 260, RGBA8(160, 168, 185, 255), 0.95f, "No messages in this thread.");
+    } else {
+        for (int i = 0; i < max_vis && (thread_scroll_offset_ + i) < total; ++i) {
+            const auto& m = active_thread_.messages[thread_scroll_offset_ + i];
+            int by = 120 + i * 64;
+            int bw = 580;
+            int bx = m.is_me ? (936 - bw) : 24;
+            unsigned int bg = m.is_me ? RGBA8(0, 118, 210, 255) : RGBA8(34, 38, 50, 255);
+
+            vita2d_draw_rectangle(bx, by, bw, 56, bg);
+            std::string meta = m.sender + (m.timestamp_text.empty() ? "" : ("  -  " + m.timestamp_text));
+            vita2d_pgf_draw_text(font_, bx + 14, by + 20, RGBA8(210, 225, 245, 255), 0.72f,
+                                 truncate_to_width(font_, 0.72f, meta, bw - 28).c_str());
+            vita2d_pgf_draw_text(font_, bx + 14, by + 44, RGBA8(255, 255, 255, 255), 0.88f,
+                                 truncate_to_width(font_, 0.88f, m.text, bw - 28).c_str());
+        }
+    }
+
+    vita2d_draw_rectangle(24, 444, 912, 38, RGBA8(28, 32, 44, 255));
+    if (!error_message_.empty()) {
+        vita2d_pgf_draw_text(font_, 40, 469, RGBA8(255, 118, 117, 255), 0.84f,
+                             truncate_to_width(font_, 0.84f, error_message_, 870).c_str());
+    } else {
+        vita2d_pgf_draw_text(font_, 40, 469, RGBA8(120, 185, 255, 255), 0.88f,
+                             "Press X or /\\ to type & send a reply   |   Up/Down: Scroll messages");
+    }
+}
+
 void AppUI::draw_lightbox() {
     vita2d_draw_rectangle(0, 0, kScreenW, kScreenH, RGBA8(8, 9, 12, 255));
     vita2d_texture* photo = textures_.get(lightbox_post_.image_url);
@@ -721,6 +1039,7 @@ void AppUI::draw() {
         switch (active_tab_) {
             case AppTab::Feed: draw_feed(); break;
             case AppTab::Search: draw_search(); break;
+            case AppTab::Messages: draw_messages(); break;
             case AppTab::Profile: draw_profile(); break;
             case AppTab::Settings: draw_settings(); break;
         }

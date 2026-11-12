@@ -16,14 +16,16 @@ namespace vitagram {
 enum class AppTab {
     Feed = 0,
     Search = 1,
-    Profile = 2,
-    Settings = 3,
+    Messages = 2,
+    Profile = 3,
+    Settings = 4,
 };
 
 enum class OskTarget {
     None,
     SearchQuery,
     ProxyUrl,
+    MessageReply,
 };
 
 class AppUI {
@@ -73,6 +75,14 @@ private:
     bool profile_loaded_ = false;
     int profile_post_index_ = 0;
 
+    // Messages (DMs) state
+    std::vector<MessageThreadSummary> inbox_threads_;
+    int inbox_index_ = 0;
+    bool inbox_loaded_once_ = false;
+    bool in_thread_view_ = false;
+    MessageThread active_thread_;
+    int thread_scroll_offset_ = 0;
+
     // Settings state
     int settings_index_ = 0;
 
@@ -81,6 +91,10 @@ private:
     void load_feed(bool reset);
     void run_search(const std::string& query);
     void open_profile(const std::string& username);
+    void load_inbox();
+    void open_thread(const std::string& thread_id);
+    void send_reply(const std::string& text);
+    void switch_to_tab(AppTab tab);
     vita2d_texture* get_or_load_texture(const std::string& relative_or_full_url);
     void preload_pending_textures();
 
@@ -89,6 +103,7 @@ private:
     void draw_tab_bar() const;
     void draw_feed();
     void draw_search();
+    void draw_messages();
     void draw_profile();
     void draw_settings() const;
     void draw_lightbox();

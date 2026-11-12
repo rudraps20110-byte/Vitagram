@@ -1,6 +1,20 @@
 import http from 'node:http';
-import { getDemoFeed, getDemoProfile, searchDemoUsers } from './demo_data.js';
-import { fetchLiveFeed, fetchLiveProfile, searchLiveUsers } from './instagram.js';
+import {
+  getDemoFeed,
+  getDemoInbox,
+  getDemoProfile,
+  getDemoThread,
+  searchDemoUsers,
+  sendDemoMessage,
+} from './demo_data.js';
+import {
+  fetchLiveFeed,
+  fetchLiveInbox,
+  fetchLiveProfile,
+  fetchLiveThread,
+  searchLiveUsers,
+  sendLiveMessage,
+} from './instagram.js';
 import { createMediaService, isSharpAvailable } from './media.js';
 
 function sendJson(res, status, payload) {
@@ -46,6 +60,9 @@ export function createRequestHandler({ config, mediaService = createMediaService
     fetchLiveFeed,
     searchLiveUsers,
     fetchLiveProfile,
+    fetchLiveInbox,
+    fetchLiveThread,
+    sendLiveMessage,
   };
 
   return async (req, res) => {
@@ -128,6 +145,55 @@ export function createRequestHandler({ config, mediaService = createMediaService
       if (req.method === 'GET' && pathname === '/api/media') {
         const jpeg = await mediaService.getMediaJpeg(reqUrl.searchParams);
         sendJpeg(res, jpeg);
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/api/messages/inbox') {
+        const data = config.isLive
+          ? await ig.fetchLiveInbox(config.session)
+          : getDemoInbox();
+        sendJson(res, 200, data);
+        return;
+      }
+
+      if (req.method === 'POST' && pathname.startsWith('/api/messages/thread/') && pathname.endsWith('/send')) {
+        const rawId = pathname.slice('/api/messages/thread/'.length, -'/send'.length);
+        const threadId = decodeURIComponent(rawId).trim();
+        if (!threadId) {
+          sendJson(res, 400, { error: 'Thread ID is required' });
+          return;
+        }
+        const body = await readJsonBody(req);
+        const text = String(body.text || '').trim();
+        if (!text) {
+          sendJson(res, 400, { error: 'Message text is required' });
+          return;
+        }
+        const result = config.isLive
+          ? await ig.sendLiveMessage(config.session, threadId, text)
+          : sendDemoMessage(threadId, text);
+        if (!result) {
+          sendJson(res, 404, { error: 'Conversation not found' });
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && pathname.startsWith('/api/messages/thread/')) {
+        const threadId = decodeURIComponent(pathname.slice('/api/messages/thread/'.length)).trim();
+        if (!threadId) {
+          sendJson(res, 400, { error: 'Thread ID is required' });
+          return;
+        }
+        const thread = config.isLive
+          ? await ig.fetchLiveThread(config.session, threadId)
+          : getDemoThread(threadId);
+        if (!thread) {
+          sendJson(res, 404, { error: 'Conversation not found' });
+          return;
+        }
+        sendJson(res, 200, thread);
         return;
       }
 

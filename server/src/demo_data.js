@@ -216,3 +216,78 @@ export function getDemoProfile(username) {
   };
 }
 
+const DEMO_THREADS = [
+  {
+    id: 'demo_thread_1',
+    title: 'vita_explorer',
+    avatar_seed: 0,
+    unread: true,
+    messages: [
+      { id: 'm1', sender: 'vita_explorer', is_me: false, text: 'Yo! Did you get VitaGram running on your PS Vita?', timestamp_text: '12m ago' },
+      { id: 'm2', sender: 'you', is_me: true, text: 'Yes! Reading DMs right from the Vita now.', timestamp_text: '10m ago' },
+      { id: 'm3', sender: 'vita_explorer', is_me: false, text: 'That OLED screen looks insane with dark mode.', timestamp_text: '3m ago' },
+    ],
+  },
+  {
+    id: 'demo_thread_2',
+    title: 'retro_pixels',
+    avatar_seed: 1,
+    unread: false,
+    messages: [
+      { id: 'm4', sender: 'retro_pixels', is_me: false, text: 'Loved your last Akihabara shot!', timestamp_text: '2h ago' },
+      { id: 'm5', sender: 'you', is_me: true, text: 'Thanks! Shooting more tonight.', timestamp_text: '1h ago' },
+    ],
+  },
+  {
+    id: 'demo_thread_3',
+    title: 'cafe_morning',
+    avatar_seed: 2,
+    unread: false,
+    messages: [
+      { id: 'm6', sender: 'cafe_morning', is_me: false, text: 'Coffee meetup this weekend?', timestamp_text: '1d ago' },
+    ],
+  },
+];
+
+export function getDemoInbox() {
+  return {
+    threads: DEMO_THREADS.map((t) => {
+      const last = t.messages[t.messages.length - 1];
+      return {
+        id: t.id,
+        title: t.title,
+        avatar_url: `/api/media?demo_avatar=${t.avatar_seed}`,
+        last_message: last ? last.text : '',
+        timestamp_text: last ? last.timestamp_text : '',
+        unread: Boolean(t.unread),
+      };
+    }),
+  };
+}
+
+export function getDemoThread(threadId) {
+  const t = DEMO_THREADS.find((item) => item.id === threadId);
+  if (!t) return null;
+  t.unread = false;
+  return {
+    id: t.id,
+    title: t.title,
+    avatar_url: `/api/media?demo_avatar=${t.avatar_seed}`,
+    messages: t.messages.map((m) => ({ ...m })),
+  };
+}
+
+export function sendDemoMessage(threadId, text) {
+  const t = DEMO_THREADS.find((item) => item.id === threadId);
+  if (!t) return null;
+  const msg = {
+    id: `m_${Date.now()}`,
+    sender: 'you',
+    is_me: true,
+    text,
+    timestamp_text: 'just now',
+  };
+  t.messages.push(msg);
+  return { ok: true, message: msg };
+}
+

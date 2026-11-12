@@ -20,6 +20,88 @@ constexpr const char* kDefaultProxyUrl = "http://127.0.0.1:8787";
 constexpr int kNetMemorySize = 1 * 1024 * 1024;
 constexpr int kHttpPoolSize = 1 * 1024 * 1024;
 constexpr size_t kMaxResponseBytes = 8 * 1024 * 1024;
+
+bool execute_http_request(int template_id,
+                          const std::string& url,
+                          int method,
+                          const std::string* body_data,
+                          std::vector<uint8_t>& out_body,
+                          int& out_status,
+                          std::string& out_error) {
+    out_body.clear();
+    out_status = 0;
+    out_error.clear();
+
+    if (template_id < 0) {
+        out_error = "HTTP client not initialized";
+        return false;
+    }
+
+    int conn_id = sceHttpCreateConnectionWithURL(template_id, url.c_str(), 0);
+    if (conn_id < 0) {
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "Connect handle error (0x%08X)", static_cast<unsigned>(conn_id));
+        out_error = buf;
+        return false;
+    }
+
+    unsigned long long content_len = body_data ? static_cast<unsigned long long>(body_data->size()) : 0ULL;
+    int req_id = sceHttpCreateRequestWithURL(conn_id, method, url.c_str(), content_len);
+    if (req_id < 0) {
+        sceHttpDeleteConnection(conn_id);
+        char buf[96];
+        std::snprintf(buf, sizeof(buf), "Request handle error (0x%08X)", static_cast<unsigned>(req_id));
+        out_error = buf;
+        return false;
+    }
+
+    if (body_data) {
+        sceHttpAddRequestHeader(req_id, "Content-Type", "application/json", SCE_HTTP_HEADER_OVERWRITE);
+    }
+
+    const void* payload_ptr = body_data && !body_data->empty() ? body_data->data() : nullptr;
+    unsigned int payload_len = body_data ? static_cast<unsigned int>(body_data->size()) : 0U;
+    int ret = sceHttpSendRequest(req_id, payload_ptr, payload_len);
+    if (ret < 0) {
+        sceHttpDeleteRequest(req_id);
+        sceHttpDeleteConnection(conn_id);
+        char buf[128];
+        std::snprintf(buf, sizeof(buf), "Proxy unreachable (0x%08X). Is server running?", static_cast<unsigned>(ret));
+        out_error = buf;
+        return false;
+    }
+
+    ret = sceHttpGetStatusCode(req_id, &out_status);
+    if (ret < 0) {
+        sceHttpDeleteRequest(req_id);
+        sceHttpDeleteConnection(conn_id);
+        out_error = "Failed to read HTTP status code";
+        return false;
+    }
+
+    uint8_t chunk[16 * 1024];
+    while (true) {
+        int read_bytes = sceHttpReadData(req_id, chunk, sizeof(chunk));
+        if (read_bytes < 0) {
+            sceHttpDeleteRequest(req_id);
+            sceHttpDeleteConnection(conn_id);
+            out_error = "Error reading HTTP response body";
+            return false;
+        }
+        if (read_bytes == 0) break;
+        if (out_body.size() + static_cast<size_t>(read_bytes) > kMaxResponseBytes) {
+            sceHttpDeleteRequest(req_id);
+            sceHttpDeleteConnection(conn_id);
+            out_error = "Response exceeded 8MB limit";
+            return false;
+        }
+        out_body.insert(out_body.end(), chunk, chunk + read_bytes);
+    }
+
+    sceHttpDeleteRequest(req_id);
+    sceHttpDeleteConnection(conn_id);
+    return true;
+}
 } // namespace
 
 NetClient::~NetClient() {
@@ -88,72 +170,27 @@ bool NetClient::http_get(const std::string& url,
                          std::vector<uint8_t>& out_body,
                          int& out_status,
                          std::string& out_error) {
-    out_body.clear();
-    out_status = 0;
-    out_error.clear();
-
-    if (!ready_ || template_id_ < 0) {
+    if (!ready_) {
+        out_body.clear();
+        out_status = 0;
         out_error = "HTTP client not initialized";
         return false;
     }
+    return execute_http_request(template_id_, url, SCE_HTTP_METHOD_GET, nullptr, out_body, out_status, out_error);
+}
 
-    int conn_id = sceHttpCreateConnectionWithURL(template_id_, url.c_str(), 0);
-    if (conn_id < 0) {
-        char buf[96];
-        std::snprintf(buf, sizeof(buf), "Connect handle error (0x%08X)", static_cast<unsigned>(conn_id));
-        out_error = buf;
+bool NetClient::http_post_json(const std::string& url,
+                               const std::string& json_body,
+                               std::vector<uint8_t>& out_body,
+                               int& out_status,
+                               std::string& out_error) {
+    if (!ready_) {
+        out_body.clear();
+        out_status = 0;
+        out_error = "HTTP client not initialized";
         return false;
     }
-
-    int req_id = sceHttpCreateRequestWithURL(conn_id, SCE_HTTP_METHOD_GET, url.c_str(), 0);
-    if (req_id < 0) {
-        sceHttpDeleteConnection(conn_id);
-        char buf[96];
-        std::snprintf(buf, sizeof(buf), "Request handle error (0x%08X)", static_cast<unsigned>(req_id));
-        out_error = buf;
-        return false;
-    }
-
-    int ret = sceHttpSendRequest(req_id, nullptr, 0);
-    if (ret < 0) {
-        sceHttpDeleteRequest(req_id);
-        sceHttpDeleteConnection(conn_id);
-        char buf[128];
-        std::snprintf(buf, sizeof(buf), "Proxy unreachable (0x%08X). Is server running?", static_cast<unsigned>(ret));
-        out_error = buf;
-        return false;
-    }
-
-    ret = sceHttpGetStatusCode(req_id, &out_status);
-    if (ret < 0) {
-        sceHttpDeleteRequest(req_id);
-        sceHttpDeleteConnection(conn_id);
-        out_error = "Failed to read HTTP status code";
-        return false;
-    }
-
-    uint8_t chunk[16 * 1024];
-    while (true) {
-        int read_bytes = sceHttpReadData(req_id, chunk, sizeof(chunk));
-        if (read_bytes < 0) {
-            sceHttpDeleteRequest(req_id);
-            sceHttpDeleteConnection(conn_id);
-            out_error = "Error reading HTTP response body";
-            return false;
-        }
-        if (read_bytes == 0) break;
-        if (out_body.size() + static_cast<size_t>(read_bytes) > kMaxResponseBytes) {
-            sceHttpDeleteRequest(req_id);
-            sceHttpDeleteConnection(conn_id);
-            out_error = "Response exceeded 8MB limit";
-            return false;
-        }
-        out_body.insert(out_body.end(), chunk, chunk + read_bytes);
-    }
-
-    sceHttpDeleteRequest(req_id);
-    sceHttpDeleteConnection(conn_id);
-    return true;
+    return execute_http_request(template_id_, url, SCE_HTTP_METHOD_POST, &json_body, out_body, out_status, out_error);
 }
 
 std::string NetClient::url_encode(const std::string& value) {

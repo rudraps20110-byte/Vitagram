@@ -10,7 +10,12 @@ import { createMediaService } from '../src/media.js';
 
 function createTestHarness(options = {}) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vitagram-test-'));
-  const config = createConfig({ dataDir: tmpDir, port: 8787, host: '127.0.0.1' });
+  const config = createConfig({
+    dataDir: tmpDir,
+    port: 8787,
+    host: '127.0.0.1',
+    session: { sessionid: '', csrftoken: '', ds_user_id: '', username: '' },
+  });
   const handler = createRequestHandler({ config, ...options });
 
   async function request(method, urlPath, bodyObj = null) {
@@ -183,6 +188,32 @@ test('media endpoint rejects invalid URLs and handles upstream JPEG pass-through
     assert.equal(ok.status, 200);
     assert.equal(ok.headers['content-type'], 'image/jpeg');
     assert.deepEqual(ok.body, fakeJpeg);
+  } finally {
+    srv.close();
+  }
+});
+
+test('messages endpoints list inbox, open thread, and send reply in demo mode', async () => {
+  const srv = createTestHarness();
+  try {
+    const inbox = (await srv.request('GET', '/api/messages/inbox')).json();
+    assert.ok(inbox.threads.length >= 2);
+    const threadId = inbox.threads[0].id;
+
+    const thread = (await srv.request('GET', `/api/messages/thread/${threadId}`)).json();
+    assert.equal(thread.id, threadId);
+    const beforeCount = thread.messages.length;
+
+    const sendRes = await srv.request('POST', `/api/messages/thread/${threadId}/send`, {
+      text: 'Testing from Vita!',
+    });
+    assert.equal(sendRes.status, 200);
+    assert.equal(sendRes.json().ok, true);
+    assert.equal(sendRes.json().message.text, 'Testing from Vita!');
+
+    const updated = (await srv.request('GET', `/api/messages/thread/${threadId}`)).json();
+    assert.equal(updated.messages.length, beforeCount + 1);
+    assert.equal(updated.messages[updated.messages.length - 1].text, 'Testing from Vita!');
   } finally {
     srv.close();
   }

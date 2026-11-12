@@ -37,14 +37,21 @@ export function createConfig(overrides = {}) {
   const dataDir = overrides.dataDir ?? DATA_DIR;
   const sessionFile = path.join(dataDir, 'session.json');
 
-  let session = {
-    sessionid: process.env.IG_SESSIONID || '',
-    csrftoken: process.env.IG_CSRFTOKEN || '',
-    ds_user_id: process.env.IG_DS_USER_ID || '',
-    username: '',
-  };
+  let session = overrides.session
+    ? {
+        sessionid: overrides.session.sessionid || '',
+        csrftoken: overrides.session.csrftoken || '',
+        ds_user_id: overrides.session.ds_user_id || '',
+        username: overrides.session.username || '',
+      }
+    : {
+        sessionid: process.env.IG_SESSIONID || '',
+        csrftoken: process.env.IG_CSRFTOKEN || '',
+        ds_user_id: process.env.IG_DS_USER_ID || '',
+        username: '',
+      };
 
-  if (fs.existsSync(sessionFile)) {
+  if (!overrides.session && fs.existsSync(sessionFile)) {
     try {
       const saved = JSON.parse(fs.readFileSync(sessionFile, 'utf8'));
       session = {

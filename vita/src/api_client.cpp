@@ -22,13 +22,7 @@ Post parse_post(const JsonValue& v) {
     return p;
 }
 
-bool get_json(NetClient& net, const std::string& url, JsonValue& out_json, std::string& out_error) {
-    std::vector<uint8_t> body;
-    int status = 0;
-    if (!net.http_get(url, body, status, out_error)) {
-        return false;
-    }
-
+bool parse_json_response(const std::vector<uint8_t>& body, int status, JsonValue& out_json, std::string& out_error) {
     std::string text(body.begin(), body.end());
     std::string parse_err;
     if (!parse_json(text, out_json, parse_err)) {
@@ -50,6 +44,56 @@ bool get_json(NetClient& net, const std::string& url, JsonValue& out_json, std::
         return false;
     }
     return true;
+}
+
+bool get_json(NetClient& net, const std::string& url, JsonValue& out_json, std::string& out_error) {
+    std::vector<uint8_t> body;
+    int status = 0;
+    if (!net.http_get(url, body, status, out_error)) {
+        return false;
+    }
+    return parse_json_response(body, status, out_json, out_error);
+}
+
+bool post_json(NetClient& net,
+               const std::string& url,
+               const std::string& payload,
+               JsonValue& out_json,
+               std::string& out_error) {
+    std::vector<uint8_t> body;
+    int status = 0;
+    if (!net.http_post_json(url, payload, body, status, out_error)) {
+        return false;
+    }
+    return parse_json_response(body, status, out_json, out_error);
+}
+
+std::string json_escape(const std::string& s) {
+    std::string out = "\"";
+    for (unsigned char c : s) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (c >= 0x20) out.push_back(static_cast<char>(c));
+                break;
+        }
+    }
+    out.push_back('"');
+    return out;
+}
+
+DirectMessage parse_dm(const JsonValue& v) {
+    DirectMessage m;
+    m.id = v.get("id").as_string();
+    m.sender = v.get("sender").as_string();
+    m.is_me = v.get("is_me").as_bool();
+    m.text = v.get("text").as_string();
+    m.timestamp_text = v.get("timestamp_text").as_string();
+    return m;
 }
 
 } // namespace
@@ -140,6 +184,65 @@ bool ApiClient::fetch_profile(const std::string& base_url,
         out_profile.posts.push_back(parse_post(item));
     }
     return true;
+}
+
+bool ApiClient::fetch_inbox(const std::string& base_url,
+                            std::vector<MessageThreadSummary>& out_threads,
+                            std::string& out_error) {
+    out_threads.clear();
+    std::string url = NetClient::resolve_url(base_url, "/api/messages/inbox");
+    JsonValue root;
+    if (!get_json(net_, url, root, out_error)) {
+        return false;
+    }
+    for (const auto& item : root.get("threads").as_array()) {
+        MessageThreadSummary t;
+        t.id = item.get("id").as_string();
+        t.title = item.get("title").as_string();
+        t.avatar_url = item.get("avatar_url").as_string();
+        t.last_message = item.get("last_message").as_string();
+        t.timestamp_text = item.get("timestamp_text").as_string();
+        t.unread = item.get("unread").as_bool();
+        out_threads.push_back(std::move(t));
+    }
+    return true;
+}
+
+bool ApiClient::fetch_thread(const std::string& base_url,
+                             const std::string& thread_id,
+                             MessageThread& out_thread,
+                             std::string& out_error) {
+    out_thread = MessageThread{};
+    std::string url = NetClient::resolve_url(
+        base_url, "/api/messages/thread/" + NetClient::url_encode(thread_id));
+    JsonValue root;
+    if (!get_json(net_, url, root, out_error)) {
+        return false;
+    }
+    out_thread.id = root.get("id").as_string(thread_id);
+    out_thread.title = root.get("title").as_string();
+    out_thread.avatar_url = root.get("avatar_url").as_string();
+    for (const auto& item : root.get("messages").as_array()) {
+        out_thread.messages.push_back(parse_dm(item));
+    }
+    return true;
+}
+
+bool ApiClient::send_message(const std::string& base_url,
+                             const std::string& thread_id,
+                             const std::string& text,
+                             DirectMessage& out_message,
+                             std::string& out_error) {
+    out_message = DirectMessage{};
+    std::string url = NetClient::resolve_url(
+        base_url, "/api/messages/thread/" + NetClient::url_encode(thread_id) + "/send");
+    std::string payload = std::string("{\"text\":") + json_escape(text) + "}";
+    JsonValue root;
+    if (!post_json(net_, url, payload, root, out_error)) {
+        return false;
+    }
+    out_message = parse_dm(root.get("message"));
+    return root.get("ok").as_bool(true);
 }
 
 vita2d_texture* ApiClient::fetch_jpeg_texture(const std::string& base_url, const std::string& path_or_url) {

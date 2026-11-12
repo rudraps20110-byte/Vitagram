@@ -53,5 +53,29 @@ struct HealthStatus {
     bool sharp_enabled = false;
 };
 
+struct MessageThreadSummary {
+    std::string id;
+    std::string title;
+    std::string avatar_url;
+    std::string last_message;
+    std::string timestamp_text;
+    bool unread = false;
+};
+
+struct DirectMessage {
+    std::string id;
+    std::string sender;
+    bool is_me = false;
+    std::string text;
+    std::string timestamp_text;
+};
+
+struct MessageThread {
+    std::string id;
+    std::string title;
+    std::string avatar_url;
+    std::vector<DirectMessage> messages;
+};
+
 } // namespace vitagram
 

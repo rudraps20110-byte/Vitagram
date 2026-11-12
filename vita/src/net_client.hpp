@@ -23,6 +23,12 @@ public:
                   int& out_status,
                   std::string& out_error);
 
+    bool http_post_json(const std::string& url,
+                        const std::string& json_body,
+                        std::vector<uint8_t>& out_body,
+                        int& out_status,
+                        std::string& out_error);
+
     static std::string url_encode(const std::string& value);
     static std::string resolve_url(const std::string& base_url, const std::string& path_or_url);
 
