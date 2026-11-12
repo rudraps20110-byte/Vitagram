@@ -1,0 +1,10 @@
+node_modules/
+server/.env
+server/data/
+vita/build/
+vita/build-docker/
+*.vpk
+*.velf
+*.self
+.DS_Store
+

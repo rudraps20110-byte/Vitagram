@@ -1,0 +1,19 @@
+{
+  "name": "vitagram-server",
+  "version": "1.0.0",
+  "description": "Companion proxy server for VitaGram (PS Vita Instagram client)",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
+
