@@ -26,6 +26,7 @@ std::string format_count(int64_t n) {
 }
 
 std::string truncate_to_width(vita2d_pgf* font, float scale, const std::string& text, int max_w) {
+    if (!font) return text;
     if (vita2d_pgf_text_width(font, scale, text.c_str()) <= max_w) return text;
     std::string out = text;
     while (out.size() > 3) {
